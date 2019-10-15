@@ -4,8 +4,7 @@ class App
 
   def call(env)
     @request = Rack::Request.new(env)
-    @path = @request.path
-    @formats = @request.params['format']
+    @output = TimeOutput.new(@request)
     check_request
   end
 
@@ -16,9 +15,9 @@ class App
   end
 
   def check_request
-    if @path != '/time'
+    if @output.invalid_path?
       [404, headers, ["Error: Invalid URL\n"]]
-    elsif @formats.nil?
+    elsif @output.empty_formats?
       [400, headers, ["Error: Time formats missing\n"]]
     else
       convert_time
@@ -26,13 +25,12 @@ class App
   end
 
   def convert_time
-    output = TimeOutput.new(@formats)
-    if output.formats_valid?
+    if @output.formats_valid?
       status = 200
-      body = output.converted_time
+      body = @output.converted_time
     else
       status = 400
-      body = "Error: Unknown format(s) #{output.unknown_time_formats}
+      body = "Error: Unknown format(s) #{@output.unknown_time_formats}
       Allowed time formats: #{TimeOutput::FORMATS_ALLOWED.keys}"
     end
     [status, headers, ["#{body}\n"]]
